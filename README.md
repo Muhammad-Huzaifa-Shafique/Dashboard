@@ -11,7 +11,9 @@ Each animation comes with the question it answers, a plain-language explanation 
 
 ## View the report
 
-GitHub shows HTML files as code, so download or clone the repository and open **`Animation_data.html`** in your browser. Keep the `Animation_data_files/` folder next to it, because the page needs it to display the charts.
+**Open it online:** [Animated Data with Gapminder](https://muhammad-huzaifa-shafique.github.io/Dashboard/Animation_data.html). No download needed.
+
+To view it offline instead, download or clone the repository and open **`Animation_data.html`** in your browser. Keep the `Animation_data_files/` folder next to it, because the page needs it to display the charts.
 
 ## About the data
 
