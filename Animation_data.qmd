@@ -1,0 +1,330 @@
+---
+title: "Animated Data with Gapminder"
+subtitle: "Data Visualization"
+date: 04/21/2026
+author:
+  - name: "Muhammad Huzaifa Shafique"
+    affiliation: "Pittsburg State University"
+    email: "mshafique@gus.pittstate.edu"
+format: 
+  html:
+    toc: true  #table of contents
+    toc-location: left
+    toc-depth: 4 #four levels of headings
+    toc-title: Table Of Contents 
+    toc-float: 
+      collapsed: true
+      smooth_scroll: true
+    number-sections: true
+    title-block-style: manuscript
+editor: visual
+---
+
+# Data Animation
+
+## Introduction
+
+It uses one dataset to build two animations and answer two different questions about global development over time. I chose the Gapminder dataset because it already has a strong time component, it covers many countries, and it contains variables that are easy to connect to a real-world story like life expectancy, GDP per capita, population, country, continent, and year. That makes it a very good fit for an animation assignment because animation is most useful when the reader needs to see change across time, not just one static snapshot.
+
+The main goal of this document is not only to show two working animations, but also to explain the dataset clearly, state an interesting question before each animation, and then discuss the results in enough detail so the reader can understand the reasons, patterns, and lessons learned.
+
+```{r}
+#| label: setup
+#| include: false
+
+required_packages <- c("plotly", "scales", "knitr")
+
+missing_packages <- required_packages[
+  !vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)
+]
+
+if (length(missing_packages) > 0) {
+  install.packages(missing_packages, repos = "https://cloud.r-project.org")
+}
+
+library(plotly)
+library(scales)
+library(knitr)
+
+gapminder <- read.csv("gapminder_dataset.csv", stringsAsFactors = FALSE)
+
+gapminder$continent <- factor(
+  gapminder$continent,
+  levels = c("Africa", "Americas", "Asia", "Europe", "Oceania")
+)
+```
+
+## Dataset context
+
+### Source of the dataset
+
+The dataset used in this project is the Gapminder dataset from the gapminder R package. The gapminder package describes this dataset as a part of the data available at Gapminder.org. In the package version used for this project, the data include 142 countries with observations every five years from 1952 to 2007.
+
+### What kind of data is used in this dataset?
+
+This is a panel dataset (also called longitudinal data). That means the same countries are observed repeatedly across multiple years. This is very useful for animation because we can watch how each country or continent moves through time instead of looking at only one year.
+
+### Interesting variables in the dataset
+
+The most important variables for this project are:
+
+| Variable  | Meaning                  | Why it matters in this project        |
+|----------------|----------------------|----------------------------------|
+| country   | Name of the country      | Lets us compare individual countries  |
+| continent | Continent of the country | Helps us see broad regional patterns  |
+| year      | Observation year         | Makes animation possible              |
+| lifeExp   | Life expectancy at birth | A simple measure of health outcomes   |
+| pop       | Population               | Helps show the scale of each country  |
+| gdpPercap | GDP per capita           | A basic measure of economic resources |
+
+### Why I chose this dataset
+
+I chose this dataset for several reasons. First, it has a clear time dimension, which is perfect for animation. Second, the variables are easy to understand, so the audience can focus on the story instead of struggling with technical language. Third, the dataset supports more than one kind of question. I can study countries individually, or I can summarize countries into continents and tell a larger regional story. Fourth, the variables are meaningful together. For example, GDP per capita and life expectancy let us ask whether richer places also tend to be healthier places. Finally, population helps show that all countries are not equally large, so the visual can carry more information than a simple scatterplot.
+
+### Quick look at the data
+
+```{r}
+#| label: data-preview
+#| echo: true
+#| results: asis
+
+summary_table <- data.frame(
+  Measure = c("Rows", "Columns", "Countries", "Continents", "Years"),
+  Value = c(
+    nrow(gapminder),
+    ncol(gapminder),
+    length(unique(gapminder$country)),
+    length(unique(gapminder$continent)),
+    paste(min(gapminder$year), "to", max(gapminder$year))
+  ),
+  stringsAsFactors = FALSE
+)
+
+knitr::kable(summary_table, caption = "Basic summary of the Gapminder dataset")
+```
+
+The table above shows why this dataset is useful for an animation project. It is not too small, so there is enough information to tell a real story, but it is also not so large that the visuals become impossible to read.
+
+## Question#1
+
+**How did the relationship between GDP per capita and life expectancy change across countries from 1952 to 2007, and did all continents move in the same direction?**
+
+From 1952 to 2007, the relationship between GDP per capita and life expectancy became clearer and stronger across countries. In general, countries with higher income per person also had higher life expectancy, showing a positive connection between wealth and health. Over time, most countries moved upward and to the right in the graph, meaning they were becoming richer and people were living longer. However, all continents did not move in exactly the same way. Europe and Oceania were already at relatively high levels and stayed strong. Asia showed major improvement, with many countries gaining both income and years of life. The Americas also improved steadily. Africa improved in life expectancy and income too, but many countries remained lower than other continents and showed more variation. So, the overall direction was mostly the same across continents, but the speed, starting point, and amount of progress were different.
+
+## Animation#1: Country-level change over time
+
+```{r}
+#| label: animation-1
+#| echo: true
+
+fig1 <- plotly::plot_ly(
+  data = gapminder,
+  x = ~gdpPercap,
+  y = ~lifeExp,
+  frame = ~year,
+  color = ~continent,
+  type = "scatter",
+  mode = "markers",
+  marker = list(size = 10, opacity = 0.75),
+  text = ~paste(
+    "Country:", country,
+    "<br>Continent:", continent,
+    "<br>Year:", year,
+    "<br>Life expectancy:", round(lifeExp, 1),
+    "<br>GDP per capita: $", scales::comma(round(gdpPercap, 0)),
+    "<br>Population:", scales::comma(pop)
+  ),
+  hoverinfo = "text"
+)
+
+fig1 <- plotly::layout(
+  fig1,
+  title = "Animation 1: GDP per Capita vs Life Expectancy by Country",
+  xaxis = list(title = "GDP per capita (log scale)", type = "log"),
+  yaxis = list(title = "Life expectancy (years)", range = c(20, 90)),
+  legend = list(title = list(text = "Continent"))
+)
+
+fig1 <- plotly::animation_opts(fig1, 1000, easing = "linear", redraw = FALSE)
+fig1 <- plotly::animation_slider(fig1, currentvalue = list(prefix = "Year: "))
+fig1 <- plotly::animation_button(fig1, x = 1, xanchor = "right", y = 0, yanchor = "bottom")
+
+fig1
+```
+
+### Explanation of results for Animation#1
+
+The first and most obvious pattern is a positive relationship between GDP per capita and life expectancy. In general, countries on the right side of the chart, which have higher income per person, also tend to appear higher on the chart, which means longer life expectancy. This pattern is not perfectly straight, but it is clearly visible through most years.
+
+A second important result is that the chart shows overall movement upward and to the right across time. That means many countries improved both economically and in health outcomes between 1952 and 2007. However, the movement is not identical for every country or every continent. Some countries improve very quickly, while others move more slowly.
+
+A third lesson is that the same amount of income does not always produce the same life expectancy. In some years, countries with similar GDP per capita still have different life expectancy values. This tells us that money matters, but it is not the only factor. Public health systems, education, sanitation, nutrition, political stability, and access to medical care also likely matter, even though they are not directly shown in this dataset.
+
+The animation also shows that continent-level clustering is visible. Europe and Oceania are generally concentrated in the higher-life-expectancy region. Africa remains lower on the chart for much of the period, although many African countries still improve over time. Asia shows major movement, with several countries making large gains in both income and life expectancy. So the main answer to the question is yes, most continents moved in a positive direction, but they did not move at the same speed or begin from the same starting point.
+
+One more lesson from this animation is why the log scale on GDP per capita is important. Without the log scale, very rich countries would pull far away from the rest and make the middle and lower-income countries harder to compare. The log scale makes the pattern easier to read while still keeping the economic differences visible.
+
+## Analysis for Question#1
+
+To support the animation with a few numbers, I calculated continent-level averages for the first year and the last year in the dataset.
+
+```{r}
+#| label: followup-1
+#| echo: true
+#| results: asis
+
+continent_start_end <- aggregate(
+  cbind(lifeExp, gdpPercap) ~ continent + year,
+  data = gapminder,
+  FUN = mean
+)
+
+continent_start_end <- continent_start_end[
+  continent_start_end$year %in% c(min(gapminder$year), max(gapminder$year)),
+]
+
+continent_start_end$lifeExp <- round(continent_start_end$lifeExp, 1)
+continent_start_end$gdpPercap <- round(continent_start_end$gdpPercap, 0)
+
+continent_start_end <- continent_start_end[order(continent_start_end$continent, continent_start_end$year), ]
+
+knitr::kable(
+  continent_start_end,
+  caption = "Average life expectancy and GDP per capita by continent in the first and last year"
+)
+```
+
+This small follow-up table supports what the animation already suggested. Most continents improved over time, but the improvement was uneven. That matters because a good explanation should not only say that "things changed". It should also explain how they changed and whether the gains were broad or unequal.
+
+## Question#2
+
+**How did population-weighted average life expectancy differ across continents over time, and did the gap between continents shrink or remain large?**
+
+From 1952 to 2007, population-weighted average life expectancy increased in every continent, but the levels were still different across regions. In 1952, Oceania and Europe had the highest averages, the Americas were in the middle, and Asia and especially Africa were lower. By 2007, all continents had improved, showing that people generally lived longer over time. Asia made one of the biggest gains, which suggests strong long-term improvement. Africa also improved, but it still remained the lowest compared to the other continents.
+
+## Animation#2: Continent-level life expectancy through time
+
+```{r}
+#| label: animation-2
+#| echo: true
+
+split_data <- split(
+  gapminder,
+  list(gapminder$year, gapminder$continent),
+  drop = TRUE
+)
+
+continent_life <- do.call(
+  rbind,
+  lapply(split_data, function(df) {
+    data.frame(
+      year = df$year[1],
+      continent = df$continent[1],
+      weighted_lifeExp = weighted.mean(df$lifeExp, df$pop),
+      total_pop = sum(df$pop),
+      weighted_gdpPercap = weighted.mean(df$gdpPercap, df$pop)
+    )
+  })
+)
+
+rownames(continent_life) <- NULL
+
+continent_life$continent <- factor(
+  continent_life$continent,
+  levels = c("Africa", "Americas", "Asia", "Europe", "Oceania")
+)
+
+fig2 <- plotly::plot_ly(
+  data = continent_life,
+  x = ~continent,
+  y = ~weighted_lifeExp,
+  frame = ~year,
+  color = ~continent,
+  type = "bar",
+  text = ~paste(
+    "Continent:", continent,
+    "<br>Year:", year,
+    "<br>Population-weighted life expectancy:", round(weighted_lifeExp, 1),
+    "<br>Total population:", scales::comma(total_pop),
+    "<br>Population-weighted GDP per capita: $", scales::comma(round(weighted_gdpPercap, 0))
+  ),
+  hoverinfo = "text"
+)
+
+fig2 <- plotly::layout(
+  fig2,
+  title = "Animation 2: Population-Weighted Life Expectancy by Continent",
+  xaxis = list(title = "Continent"),
+  yaxis = list(title = "Population-weighted life expectancy", range = c(20, 85)),
+  showlegend = FALSE
+)
+
+fig2 <- plotly::animation_opts(fig2, 1000, easing = "linear", redraw = FALSE)
+fig2 <- plotly::animation_slider(fig2, currentvalue = list(prefix = "Year: "))
+fig2 <- plotly::animation_button(fig2, x = 1, xanchor = "right", y = 0, yanchor = "bottom")
+
+fig2
+```
+
+### Explanation of results for Animation#2
+
+This animation makes the continent story much easier to read. Europe and Oceania stay near the top for most of the timeline, which means they maintain relatively high life expectancy throughout the period. Africa stays at the bottom, even though it still shows improvement over time. Asia starts lower but makes strong gains, which is one of the most important movements in the full dataset.
+
+Using a population-weighted average is important here. A simple average would treat a small country and a very large country as equally important. In contrast, the weighted version gives more influence to countries with larger populations. That makes the result better for a continent-level interpretation because it reflects where more people actually live.
+
+The animation suggests that the gap between continents shrinks somewhat, because lower-performing regions do improve, but the gap does not disappear by the end of the dataset. In other words, global health outcomes improved overall, but regional inequality remained visible.
+
+Another lesson is that it is useful to look at the same dataset from two levels at once. The country-level animation reveals spread, clusters, and exceptions. The continent-level animation removes some of that noise and highlights the broader direction of change. Together, the two animations answer the assignment questions more clearly than either one would by itself.
+
+## Analysis for Question#2
+
+```{r}
+#| label: followup-2
+#| echo: true
+#| results: asis
+
+first_year <- min(continent_life$year)
+last_year  <- max(continent_life$year)
+
+life_1952 <- continent_life[continent_life$year == first_year, c("continent", "weighted_lifeExp")]
+life_2007 <- continent_life[continent_life$year == last_year,  c("continent", "weighted_lifeExp")]
+
+names(life_1952)[2] <- "lifeExp_1952"
+names(life_2007)[2] <- "lifeExp_2007"
+
+continent_change <- merge(life_1952, life_2007, by = "continent")
+continent_change$change <- continent_change$lifeExp_2007 - continent_change$lifeExp_1952
+
+continent_change$lifeExp_1952 <- round(continent_change$lifeExp_1952, 1)
+continent_change$lifeExp_2007 <- round(continent_change$lifeExp_2007, 1)
+continent_change$change <- round(continent_change$change, 1)
+
+continent_change <- continent_change[order(-continent_change$change), ]
+
+knitr::kable(
+  continent_change,
+  caption = "Population-weighted life expectancy change from 1952 to 2007"
+)
+```
+
+The table above helps explain the results in words. It shows which continents improved the most and how much change happened between the beginning and end of the dataset. This is useful because the animation helps the reader see the pattern, while the table helps the reader measure it.
+
+## Lessons learned
+
+First, animation works best when time matters. In this dataset, the key questions are about change across decades, so animation is a strong choice. If I used only static figures, it would be harder to show the direction and speed of change.
+
+Second, the project shows that economic development and health outcomes are related, but not identical. Countries with higher GDP per capita often have higher life expectancy, yet countries with similar income can still have different health outcomes. This means that development is more complex than money alone.
+
+Third, the project shows the value of comparing different levels of analysis. The country-level view helps reveal variation inside each continent, while the continent-level view highlights the larger long-run trend. Looking from more than one angle leads to a more complete explanation.
+
+Fourth, the project shows that overall progress does not automatically mean equality. Many countries and continents improved over time, but regional gaps remained. So the broad story is positive, but it is not a story of complete convergence.
+
+## Limitations
+
+This project also has a few limitations. The dataset ends in 2007, so it should not be treated as a statement about the world today. In addition, the variables are country-level summaries, which means they do not capture inequality within countries. Finally, GDP per capita is a useful economic indicator, but it does not describe every part of well-being.
+
+## Conclusion
+
+This document used the Gapminder dataset to answer two questions with two animations. The first animation showed that countries generally move toward higher GDP per capita and higher life expectancy over time, although the pace of improvement varies across continents. The second animation showed that population-weighted life expectancy improved in every continent, but major regional differences remained.
+
+Overall, the two animations worked well because they told a connected story. The first animation showed the detailed country-level movement, and the second animation summarized that movement at the continent level. Together, they provide a clearer explanation of the data, the reasons for choosing the dataset, and the main lessons learned from the analysis.

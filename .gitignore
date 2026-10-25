@@ -1,0 +1,12 @@
+# R session files
+.Rhistory
+.RData
+.Rproj.user/
+.Ruserdata
+
+# Quarto cache
+/.quarto/
+
+# OS files
+.DS_Store
+Thumbs.db

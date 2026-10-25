@@ -1,0 +1,3 @@
+# Keep generated and bundled files out of GitHub's language statistics
+Animation_data.html linguist-generated=true
+Animation_data_files/** linguist-vendored=true
